@@ -442,6 +442,7 @@ class GameEngine {
       winners:         this.winners,
       showdownResults: this.showdownResults,
       bbSize:          this.bbSize,
+      actionLog:       this.actionLog,   // ← AI preflop decision needs this
     };
   }
 }

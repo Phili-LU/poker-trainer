@@ -184,43 +184,78 @@ function scheduleNextAction() {
 }
 
 function executeAIAction(player) {
-  if (gameState.street === 'showdown') { aiThinking = false; endHand(); return; }
+  // Safety: always reset aiThinking even if something crashes
+  try {
+    if (gameState.street === 'showdown') { aiThinking = false; endHand(); return; }
 
-  const decision = getAIDecision(player, { ...gameState, bbSize: engine.bbSize });
-  let action = decision.action;
-  let amount = decision.amount || 0;
+    // Skip if player already folded/all-in (state may have changed)
+    if (player.folded || player.allIn) {
+      aiThinking = false;
+      const next = engine.getCurrentPlayer();
+      if (next && !next.isHuman) {
+        aiThinking = true;
+        setTimeout(() => executeAIAction(next), settings.speed * 0.4);
+      } else if (next?.isHuman) {
+        showActionButtons();
+      }
+      return;
+    }
 
-  // Validate action
-  const valid = engine.getValidActions(player);
-  const hasCheck = valid.includes('check');
-  const callEntry = valid.find(v => v?.action === 'call');
+    const decision = getAIDecision(player, { ...gameState, bbSize: engine.bbSize });
+    let action = decision.action;
+    let amount = decision.amount || 0;
 
-  if (action === 'check' && !hasCheck && callEntry) action = 'call';
-  if (action === 'call'  && !callEntry) action = 'fold';
+    // Validate action against what's actually legal
+    const valid = engine.getValidActions(player);
+    const hasCheck  = valid.includes('check');
+    const callEntry = valid.find(v => v?.action === 'call');
 
-  // Show action badge
-  showActionBadge(player.id, action, amount);
+    if (action === 'check' && !hasCheck && callEntry) { action = 'call'; amount = callEntry.amount; }
+    if (action === 'call'  && !callEntry) action = 'fold';
+    if ((action === 'raise' || action === 'bet') && player.stack <= 0) action = 'fold';
 
-  engine.handleAction(player.id, action, amount);
-  gameState = engine.getState();
+    // Show action badge
+    showActionBadge(player.id, action, amount);
 
-  renderBoard();
-  updateAllSeats();
-  updateStreetBadge();
+    engine.handleAction(player.id, action, amount);
+    gameState = engine.getState();
 
-  aiThinking = false;
+    renderBoard();
+    updateAllSeats();
+    updateStreetBadge();
 
-  if (gameState.street === 'showdown') {
-    endHand();
-  } else {
-    const next = engine.getCurrentPlayer();
-    if (!next) { endHand(); return; }
-    if (next.isHuman) {
-      showActionButtons();
+    aiThinking = false;
+
+    if (gameState.street === 'showdown') {
+      endHand();
     } else {
-      aiThinking = true;
-      const delay = settings.speed * (0.4 + Math.random() * 0.6);
-      setTimeout(() => executeAIAction(next), delay);
+      const next = engine.getCurrentPlayer();
+      if (!next) { endHand(); return; }
+      if (next.isHuman) {
+        showActionButtons();
+      } else {
+        aiThinking = true;
+        const delay = settings.speed * (0.4 + Math.random() * 0.6);
+        setTimeout(() => executeAIAction(next), delay);
+      }
+    }
+  } catch (err) {
+    // Prevent game from getting stuck if AI decision throws
+    console.error('AI action error:', err);
+    aiThinking = false;
+    // Try to continue by folding the crashed player
+    try {
+      engine.handleAction(player.id, 'fold', 0);
+      gameState = engine.getState();
+      renderBoard();
+      updateAllSeats();
+      if (gameState.street === 'showdown') {
+        endHand();
+      } else {
+        scheduleNextAction();
+      }
+    } catch (e2) {
+      showDealButton(); // last resort
     }
   }
 }
@@ -370,14 +405,9 @@ function updateAllSeats() {
       } else if (p.isHuman && p.holeCards.length) {
         cardsEl.innerHTML = p.holeCards.map(c => c.html()).join('');
       } else if (p.holeCards.length) {
-        // Show face-down during hand, reveal at showdown
-        if (gameState.street === 'showdown' && gameState.showdownResults) {
-          const sr = gameState.showdownResults?.find(r => r.name === p.name);
-          if (sr) {
-            cardsEl.innerHTML = p.holeCards.map(c => c.html()).join('');
-          } else {
-            cardsEl.innerHTML = `<div class="card card-back"></div><div class="card card-back"></div>`;
-          }
+        // AI cards: face-down during hand, face-up at showdown
+        if (gameState.street === 'showdown') {
+          cardsEl.innerHTML = p.holeCards.map(c => c.html()).join('');
         } else {
           cardsEl.innerHTML = `<div class="card card-back"></div><div class="card card-back"></div>`;
         }

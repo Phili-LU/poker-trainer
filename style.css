@@ -299,12 +299,12 @@ html, body {
 
 .seat-hero .seat-info { border-color: var(--blue); }
 
-.seat-cards { display: flex; gap: 3px; min-height: 20px; justify-content: center; }
-.seat-cards .card { width: 28px; height: 40px; font-size: 10px; }
-.seat-cards .card-rank { font-size: 11px; }
-.seat-cards .card-suit { font-size: 9px; }
+.seat-cards { display: flex; gap: 3px; min-height: 46px; justify-content: center; align-items: flex-end; }
+.seat-cards .card { width: 32px; height: 46px; font-size: 11px; }
+.seat-cards .card-rank { font-size: 13px; }
+.seat-cards .card-suit { font-size: 10px; }
 .seat-cards .card-back, .seat-cards .card-placeholder, .seat-cards .card-folded {
-  width: 28px; height: 40px;
+  width: 32px; height: 46px;
 }
 
 .seat-info {
