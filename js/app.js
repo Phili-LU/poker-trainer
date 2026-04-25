@@ -654,6 +654,7 @@ async function callClaude(messages) {
         'Content-Type':      'application/json',
         'x-api-key':         getClaudeKey(),
         'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
         model:      CLAUDE_MODEL,
