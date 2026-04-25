@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GTO 練習桌 — Phili</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════ -->
+<!-- 密碼鎖畫面                          -->
+<!-- ═══════════════════════════════════ -->
+<div id="lock-screen">
+  <div class="lock-card">
+    <div class="lock-icon">🃏</div>
+    <h1 class="lock-title">GTO 練習桌</h1>
+    <p class="lock-sub">Texas Hold'em · GTO 輔助訓練</p>
+    <input type="password" id="lock-input" class="lock-input"
+           placeholder="輸入密碼" autocomplete="off"
+           onkeydown="if(event.key==='Enter') unlock()">
+    <button class="lock-btn" onclick="unlock()">進入</button>
+    <p id="lock-error" class="lock-error"></p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ -->
+<!-- 主應用                              -->
+<!-- ═══════════════════════════════════ -->
+<div id="app" class="hidden">
+
+  <!-- 頂部導航 -->
+  <header class="app-header">
+    <div class="header-left">
+      <span class="app-title">🃏 GTO 練習桌</span>
+      <span id="session-badge" class="session-badge">6-max · 100BB</span>
+    </div>
+    <div class="header-right">
+      <button class="hdr-btn" onclick="toggleSettings()">⚙️ 設定</button>
+    </div>
+  </header>
+
+  <!-- 設定浮層 -->
+  <div id="settings-overlay" class="settings-overlay hidden" onclick="if(event.target===this)toggleSettings()">
+    <div class="settings-card">
+      <div class="settings-header">
+        <h3>遊戲設定</h3>
+        <button onclick="toggleSettings()">✕</button>
+      </div>
+      <div class="settings-body">
+        <label class="set-label">桌型</label>
+        <div class="set-radio-group">
+          <label class="set-radio"><input type="radio" name="table-size" value="6" checked> 6-max</label>
+          <label class="set-radio"><input type="radio" name="table-size" value="9"> 9-max</label>
+        </div>
+
+        <label class="set-label">對手風格</label>
+        <select id="set-ai-style" class="set-select">
+          <option value="mixed">混合（各種類型）</option>
+          <option value="fish">全魚桌 🐟</option>
+          <option value="tag">全 TAG 🎯</option>
+          <option value="lag">全 LAG 🔥</option>
+          <option value="nit">全 Nit 🐌</option>
+          <option value="station">全 Station 🤑</option>
+        </select>
+
+        <label class="set-label">起始籌碼</label>
+        <select id="set-stack" class="set-select">
+          <option value="100">100 BB</option>
+          <option value="200">200 BB</option>
+          <option value="50">50 BB（短籌）</option>
+        </select>
+
+        <label class="set-label">手牌間隔</label>
+        <select id="set-speed" class="set-select">
+          <option value="1500">一般（1.5 秒）</option>
+          <option value="800">快速（0.8 秒）</option>
+          <option value="3000">慢速（3 秒）</option>
+        </select>
+
+        <label class="set-label">Anthropic API Key（僅存在瀏覽器，不上傳）</label>
+        <input type="password" id="set-api-key" class="set-select" placeholder="sk-ant-api03-..." autocomplete="off">
+
+        <button class="set-save-btn" onclick="applySettings()">套用設定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 主體佈局 -->
+  <div class="game-layout">
+
+    <!-- ── 左側：撲克桌 ─────────────────── -->
+    <div class="table-area">
+
+      <!-- 桌子 -->
+      <div class="poker-table" id="poker-table">
+        <!-- 座位由 JS 渲染 -->
+        <div class="table-felt">
+          <div class="community-area">
+            <div id="community-cards" class="community-cards"></div>
+            <div id="pot-info" class="pot-info">
+              <span id="pot-label">等待開始</span>
+            </div>
+            <div id="street-badge" class="street-badge hidden"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 玩家操作區 -->
+      <div id="action-area" class="action-area hidden">
+        <div id="action-context" class="action-context"></div>
+        <div class="action-buttons">
+          <button class="act-btn fold-btn"  onclick="playerAction('fold')">
+            <span class="act-name">棄牌</span>
+            <span class="act-en">Fold</span>
+          </button>
+          <button class="act-btn check-btn" id="check-call-btn" onclick="doCheckCall()">
+            <span class="act-name" id="check-call-label">過牌</span>
+            <span class="act-en"  id="check-call-en">Check</span>
+          </button>
+          <button class="act-btn raise-btn" id="raise-btn" onclick="doRaise()">
+            <span class="act-name" id="raise-label">加注</span>
+            <span class="act-en"  id="raise-amount-label">Raise</span>
+          </button>
+        </div>
+        <div class="raise-sizing">
+          <div class="sizing-btns">
+            <button class="sz-btn" onclick="setSizing(0.33)">⅓ Pot</button>
+            <button class="sz-btn" onclick="setSizing(0.5)">½ Pot</button>
+            <button class="sz-btn" onclick="setSizing(0.75)">¾ Pot</button>
+            <button class="sz-btn" onclick="setSizing(1.0)">Pot</button>
+            <button class="sz-btn" onclick="setSizing(2.0)">2× Pot</button>
+            <button class="sz-btn allin-btn" onclick="setSizing(999)">All-in</button>
+          </div>
+          <div class="custom-raise">
+            <span class="cr-label">加注到</span>
+            <input type="number" id="raise-input" class="raise-input" min="0" step="0.5">
+            <span class="cr-label">BB</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 新一手 -->
+      <div id="deal-area" class="deal-area">
+        <button class="deal-btn" onclick="startNewHand()">▶ 開始新一手</button>
+      </div>
+
+    </div><!-- /.table-area -->
+
+    <!-- ── 右側：側邊欄 ──────────────────── -->
+    <aside class="sidebar">
+      <div class="sidebar-tabs">
+        <button class="stab active" data-panel="analysis" onclick="showPanel('analysis')">💬 分析</button>
+        <button class="stab"        data-panel="history"  onclick="showPanel('history')">📋 記錄</button>
+        <button class="stab"        data-panel="stats"    onclick="showPanel('stats')">📊 統計</button>
+        <button class="stab"        data-panel="range"    onclick="showPanel('range')">🎯 範圍</button>
+      </div>
+
+      <!-- 💬 分析 -->
+      <div id="panel-analysis" class="s-panel active">
+        <div id="analysis-messages" class="analysis-messages">
+          <div class="chat-placeholder">
+            <p>完成一手牌後，AI 會自動分析你的決策。</p>
+            <p class="chat-hint">你也可以在打牌途中隨時提問。</p>
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" id="chat-input" class="chat-input"
+                 placeholder="問 GTO 教練…"
+                 onkeydown="if(event.key==='Enter') sendChat()">
+          <button class="chat-send" onclick="sendChat()">送出</button>
+        </div>
+      </div>
+
+      <!-- 📋 手牌記錄 -->
+      <div id="panel-history" class="s-panel hidden">
+        <div id="hand-history" class="hand-history">
+          <p class="empty-panel-msg">尚無手牌記錄</p>
+        </div>
+      </div>
+
+      <!-- 📊 統計 -->
+      <div id="panel-stats" class="s-panel hidden">
+        <div class="stats-grid">
+          <div class="stat-box"><div class="stat-num" id="st-hands">0</div><div class="stat-lbl">手數</div></div>
+          <div class="stat-box"><div class="stat-num profit" id="st-profit">±0</div><div class="stat-lbl">BB 盈虧</div></div>
+          <div class="stat-box"><div class="stat-num" id="st-bb100">0</div><div class="stat-lbl">BB/100</div></div>
+          <div class="stat-box"><div class="stat-num" id="st-vpip">–</div><div class="stat-lbl">VPIP</div></div>
+          <div class="stat-box"><div class="stat-num" id="st-pfr">–</div><div class="stat-lbl">PFR</div></div>
+          <div class="stat-box"><div class="stat-num" id="st-af">–</div><div class="stat-lbl">AF</div></div>
+        </div>
+        <div id="stats-tip" class="stats-tip"></div>
+        <div class="stats-definitions">
+          <p><strong>VPIP</strong> 自願投入底池率（含 call + raise）</p>
+          <p><strong>PFR</strong> 翻前加注率</p>
+          <p><strong>AF</strong> 侵略因子 = (bet+raise) / call</p>
+          <p><strong>BB/100</strong> 每 100 手平均盈虧 BB 數</p>
+        </div>
+      </div>
+
+      <!-- 🎯 範圍表 -->
+      <div id="panel-range" class="s-panel hidden">
+        <div class="range-controls">
+          <select id="range-pos" class="range-select" onchange="renderRangeGrid()">
+            <option value="BTN">BTN 按鈕位</option>
+            <option value="CO">CO 劫持位</option>
+            <option value="HJ">HJ 跨越位</option>
+            <option value="MP">MP 中間位</option>
+            <option value="UTG">UTG 槍口位</option>
+            <option value="SB">SB 小盲位</option>
+          </select>
+          <select id="range-action" class="range-select" onchange="renderRangeGrid()">
+            <option value="open">Open Raise</option>
+            <option value="3bet">3-Bet</option>
+            <option value="call">Call（vs Open）</option>
+          </select>
+        </div>
+        <div id="range-grid" class="range-grid"></div>
+        <div class="range-legend">
+          <span class="leg"><span class="leg-dot green"></span>開牌 / 執行</span>
+          <span class="leg"><span class="leg-dot yellow"></span>混合頻率</span>
+          <span class="leg"><span class="leg-dot gray"></span>棄牌</span>
+        </div>
+        <div id="range-pct" class="range-pct"></div>
+      </div>
+
+    </aside>
+
+  </div><!-- /.game-layout -->
+</div><!-- /#app -->
+
+<script src="js/engine.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/gto.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
