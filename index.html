@@ -81,7 +81,8 @@
         </select>
 
         <label class="set-label">Anthropic API Key（僅存在瀏覽器，不上傳）</label>
-        <input type="password" id="set-api-key" class="set-select" placeholder="sk-ant-api03-..." autocomplete="off">
+        <input type="text" id="set-api-key" class="set-select" placeholder="sk-ant-api03-..." autocomplete="off">
+        <button class="set-clear-btn" onclick="clearApiKey()">🗑 清除已存的 Key</button>
 
         <button class="set-save-btn" onclick="applySettings()">套用設定</button>
       </div>

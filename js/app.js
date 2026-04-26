@@ -70,8 +70,14 @@ function applySettings() {
 function loadApiKeyToInput() {
   const el = document.getElementById('set-api-key');
   if (!el) return;
-  el.value = '';   // 不填入任何值，避免誤存假文字
+  el.value = '';
   el.placeholder = getClaudeKey() ? '（已設定，留空則不更改）' : 'sk-ant-api03-...';
+}
+
+function clearApiKey() {
+  saveClaudeKey('');
+  loadApiKeyToInput();
+  alert('✅ API Key 已清除，請在上方欄位重新貼上正確的 Key 後點「套用設定」。');
 }
 
 // ── Game Init ─────────────────────────────────
@@ -648,7 +654,7 @@ ${log}
 
 async function callClaude(messages) {
   if (!getClaudeKey()) {
-    return '⚠️ 尚未設定 Anthropic API Key。請點右上角 ⚙️ 設定，輸入你的 API Key 後儲存。';
+    return '⚠️ 尚未設定 API Key。請點右上角 ⚙️，在「Anthropic API Key」欄位貼上你的 key 後點套用。';
   }
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -666,6 +672,14 @@ async function callClaude(messages) {
         messages,
       }),
     });
+
+    if (res.status === 401) {
+      // Key 無效 — 清除並提示重新輸入
+      saveClaudeKey('');
+      loadApiKeyToInput();
+      return '⚠️ API Key 無效（401）。舊的 Key 已自動清除，請點右上角 ⚙️ 重新輸入正確的 Key。';
+    }
+
     if (!res.ok) throw new Error(`API ${res.status}`);
     const data = await res.json();
     return data.content?.[0]?.text || '（無回應）';

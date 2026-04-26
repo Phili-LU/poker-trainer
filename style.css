@@ -167,6 +167,17 @@ html, body {
   cursor: pointer;
   margin-top: 4px;
 }
+.set-clear-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text2);
+  padding: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-top: -6px;
+}
+.set-clear-btn:hover { border-color: var(--red-l); color: var(--red-l); }
 
 /* ── Main Layout ─────────────────────────────── */
 .game-layout {
