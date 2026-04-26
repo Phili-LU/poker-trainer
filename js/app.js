@@ -60,7 +60,8 @@ function applySettings() {
   settings.speed      = parseInt(document.getElementById('set-speed').value);
 
   const keyInput = document.getElementById('set-api-key').value.trim();
-  if (keyInput) saveClaudeKey(keyInput);
+  // 只有真的像 API key 的字串才存（避免存入佔位文字）
+  if (keyInput && keyInput.startsWith('sk-')) saveClaudeKey(keyInput);
 
   toggleSettings();
   initGame();
@@ -68,7 +69,9 @@ function applySettings() {
 
 function loadApiKeyToInput() {
   const el = document.getElementById('set-api-key');
-  if (el && getClaudeKey()) el.value = '（已設定）';
+  if (!el) return;
+  el.value = '';   // 不填入任何值，避免誤存假文字
+  el.placeholder = getClaudeKey() ? '（已設定，留空則不更改）' : 'sk-ant-api03-...';
 }
 
 // ── Game Init ─────────────────────────────────
