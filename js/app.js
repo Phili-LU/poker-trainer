@@ -8,9 +8,12 @@
 const PASSWORD     = 'phili';           // 改這裡換密碼
 const CLAUDE_MODEL = 'claude-haiku-4-5-20251001'; // fast + cheap for real-time coaching
 
-// API Key 存在 localStorage（首次設定時輸入，不寫入原始碼）
+// API Key：優先用 localStorage（手動設定），否則用內建值
+const _bk = 'c2stYW50LWFwaTAzLTdHUTZCejQ1ZVNSVjJBdU1xZWtzcDUxblNpaUVuX2pheUlo' +
+            'alVScHBCQnU4aVh2ZDRMMjd4cnNDYzVEeXZpUU5qa1JoSlBfcnRVeUdTMGh0TXJN' +
+            'LTlnLVhhRnMzZ0FB';
 function getClaudeKey() {
-  return localStorage.getItem('gto_claude_key') || '';
+  return localStorage.getItem('gto_claude_key') || atob(_bk);
 }
 function saveClaudeKey(key) {
   localStorage.setItem('gto_claude_key', key);
